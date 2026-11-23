@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>三阶 / 四阶魔方 · 涂色与复原</title>
+<meta name="description" content="可拖动转动的 3D 三阶 / 四阶魔方：点贴纸涂色，点复原给出逐步解法。纯静态网页，离线可用。">
+<style>
+  :root {
+    --ink: #e8eef9;
+    --dim: #93a4bd;
+    --line: rgba(148, 163, 184, .22);
+    --glass: rgba(13, 20, 36, .82);
+    --accent: #7dd3fc;
+    --gold: #fbbf24;
+    --red: #f87171;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #060a13; color: var(--ink);
+    font: 14px/1.55 "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    -webkit-user-select: none; user-select: none; }
+  #stage { position: fixed; inset: 0; display: block; width: 100%; height: 100%; touch-action: none;
+    background: radial-gradient(120% 90% at 50% 0%, #16233d 0%, #0a1120 45%, #05080f 100%); }
+  .panel { position: fixed; background: var(--glass); border: 1px solid var(--line); border-radius: 16px;
+    backdrop-filter: blur(10px); box-shadow: 0 18px 50px rgba(0, 0, 0, .45); }
+
+  #hud { top: 16px; left: 16px; width: 306px; padding: 16px 16px 14px; }
+  h1 { margin: 0; font-size: 19px; letter-spacing: .04em; font-weight: 700; }
+  h1 em { font-style: normal; color: var(--gold); font-weight: 800; }
+  .sub { margin: 4px 0 12px; font-size: 11.5px; color: var(--dim); line-height: 1.6; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; }
+  button { font: inherit; color: var(--ink); background: rgba(148, 163, 184, .12);
+    border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; cursor: pointer;
+    transition: .16s; }
+  button:hover { background: rgba(125, 211, 252, .18); border-color: rgba(125, 211, 252, .5); }
+  button.on { background: rgba(125, 211, 252, .26); border-color: var(--accent); color: #eaf7ff; }
+  button.primary { background: linear-gradient(180deg, #2f6fd0, #1e4f9e); border-color: #4b8ce0; font-weight: 700; }
+  button.primary:hover { filter: brightness(1.12); }
+  button:disabled { opacity: .42; cursor: default; }
+  button:disabled:hover { background: rgba(148, 163, 184, .12); border-color: var(--line); }
+  #sizes { margin-bottom: 8px; }
+  #sizes button { flex: 1 1 0; min-width: 0; padding: 7px 4px; font-weight: 600; }
+  #modes { margin-bottom: 10px; }
+  #modes button { flex: 1; }
+  .palette { display: none; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 0 0 10px; }
+  .palette.show { display: grid; }
+  .sw { display: flex; align-items: center; gap: 6px; padding: 5px 7px; border-radius: 9px;
+    border: 1px solid var(--line); background: rgba(148, 163, 184, .08); cursor: pointer; font-size: 12px; }
+  .sw:hover { border-color: rgba(125, 211, 252, .5); }
+  .sw.on { border-color: var(--accent); background: rgba(125, 211, 252, .2); }
+  .dot { width: 16px; height: 16px; border-radius: 5px; border: 1px solid rgba(0, 0, 0, .35); flex: none; }
+  .sw b { font-weight: 600; }
+  .sw i { font-style: normal; color: var(--dim); font-size: 11px; }
+  #acts { margin-top: 2px; }
+  #acts button { flex: 1 1 auto; }
+  .tip { margin-top: 10px; font-size: 12px; color: var(--dim); min-height: 18px; line-height: 1.5; }
+  .tip.err { color: var(--red); }
+  .tip.ok { color: #6ee7b7; }
+
+  #side { top: 16px; right: 16px; width: 296px; max-height: calc(100vh - 96px);
+    display: flex; flex-direction: column; padding: 14px 14px 10px; }
+  .side-head { font-size: 13px; font-weight: 700; letter-spacing: .04em; display: flex;
+    justify-content: space-between; align-items: baseline; padding-bottom: 8px;
+    border-bottom: 1px solid var(--line); }
+  .side-head span { font-weight: 400; color: var(--dim); font-size: 11.5px; }
+  #steps { list-style: none; margin: 0; padding: 6px 0 0; overflow-y: auto; flex: 1; }
+  #steps li { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 8px;
+    font-size: 12.5px; cursor: pointer; transition: background .12s; }
+  #steps li:hover { background: rgba(148, 163, 184, .14); }
+  #steps li.empty { cursor: default; }
+  #steps li.empty:hover { background: none; }
+  #steps li .no { width: 20px; color: var(--dim); text-align: right; font-variant-numeric: tabular-nums; }
+  #steps li .mv { font-family: "Consolas", ui-monospace, monospace; font-weight: 700;
+    min-width: 34px; color: var(--gold); }
+  #steps li .desc { color: var(--dim); font-size: 11.5px; }
+  #steps li.cur { background: rgba(125, 211, 252, .18); }
+  #steps li.done .mv { color: #64748b; }
+  .playbar { display: flex; align-items: center; gap: 6px; padding-top: 8px; border-top: 1px solid var(--line); }
+  .playbar button { flex: none; }
+  .playbar #btn-step { background: linear-gradient(180deg, #2f6fd0, #1e4f9e); border-color: #4b8ce0;
+    font-weight: 700; letter-spacing: .02em; }
+  .playbar #btn-step:hover:not(:disabled) { filter: brightness(1.12); }
+  .playbar #btn-step:disabled { background: rgba(148, 163, 184, .12); border-color: var(--line);
+    font-weight: 400; color: var(--dim); }
+  .playbar #playInfo { color: var(--dim); font-size: 11.5px; }
+  .empty { color: var(--dim); font-size: 12px; padding: 10px 6px; line-height: 1.7; }
+
+  #hint { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
+    font-size: 11.5px; color: #6b7c96; white-space: nowrap; pointer-events: none; }
+  @media (max-width: 900px) {
+    #hud { width: 258px; padding: 12px; }
+    #side { width: 236px; }
+    #hint { font-size: 10.5px; }
+  }
+  @media (max-width: 660px) {
+    #side { top: auto; bottom: 12px; right: 12px; left: 12px; width: auto; max-height: 34vh; }
+    #hint { display: none; }
+  }
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+
+<header class="panel" id="hud">
+  <h1>魔方 <em>2×2 / 3×3 / 4×4</em></h1>
+  <p class="sub">拖动贴纸转一层 · 点贴纸涂色<br>二阶、三阶给逐步解；四阶求解开发中</p>
+  <div class="row" id="sizes">
+    <button class="size" data-n="2">二阶</button>
+    <button class="size on" data-n="3">三阶</button>
+    <button class="size" data-n="4">四阶</button>
+  </div>
+  <div class="row" id="modes">
+    <button class="mode on" data-mode="turn">转动</button>
+    <button class="mode" data-mode="paint">涂色</button>
+  </div>
+  <div class="palette" id="palette"></div>
+  <div class="row" id="acts">
+    <button id="btn-scramble">打乱</button>
+    <button id="btn-reset">复原态</button>
+    <button class="primary" id="btn-solve">开始复原</button>
+  </div>
+  <div class="row" id="acts4" style="margin-top:6px;display:none">
+    <button id="btn-pairs">棱块配对清单</button>
+  </div>
+  <div class="tip" id="tip">先涂色，或者直接点「打乱」玩。</div>
+</header>
+
+<aside class="panel" id="side">
+  <div class="side-head">复原步骤 <span id="stepCount">—</span></div>
+  <ol id="steps"><li class="empty">还没有解算。点「开始复原」，布洛妮娅会把每一步列在这里，然后点「下一步」一步一步走。</li></ol>
+  <div class="playbar">
+    <button id="btn-back" disabled>上一步</button>
+    <button id="btn-step" disabled>下一步</button>
+    <button id="btn-play" disabled>▶ 自动</button>
+    <span id="playInfo"></span>
+  </div>
+</aside>
+
+<footer id="hint">拖动空白处旋转视角 · 滚轮缩放 · 键盘 U R F L D B（Shift 逆时针）· → / 空格 = 下一步</footer>
+
+<script>window.module = { exports: {} };</script>
+<script src="vendor/three.min.js"></script>
+<script src="vendor/cube3/cube.js"></script>
+<script>window.Cube = window.module.exports;</script>
+<script src="vendor/cube3/solve.js"></script>
+<script src="cuben.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

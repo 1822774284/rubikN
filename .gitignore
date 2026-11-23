@@ -1,0 +1,10 @@
+# 第三方源码残留（rsc 整包，代码里没引用）
+_dep2/
+
+# 依赖目录
+node_modules/
+
+# 编辑器 / 系统噪声
+.DS_Store
+Thumbs.db
+*.log
