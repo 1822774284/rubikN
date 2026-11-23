@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>三阶 / 四阶魔方 · 涂色与复原</title>
-<meta name="description" content="可拖动转动的 3D 三阶 / 四阶魔方：点贴纸涂色，点复原给出逐步解法。纯静态网页，离线可用。">
+<title>二阶 / 三阶 / 四阶魔方 · 涂色与复原</title>
+<meta name="description" content="可拖动转动的 3D 二/三/四阶魔方：点贴纸涂色，点复原给出逐步解法，没有实体魔方也能看它自己解完。纯静态网页，离线可用。">
 <style>
   :root {
     --ink: #e8eef9;
@@ -42,6 +42,8 @@
   #sizes button { flex: 1 1 0; min-width: 0; padding: 7px 4px; font-weight: 600; }
   #modes { margin-bottom: 10px; }
   #modes button { flex: 1; }
+  #diffs { margin-bottom: 6px; }
+  #diffs button { flex: 1; padding: 5px 4px; font-size: 12px; font-weight: 600; }
   .palette { display: none; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 0 0 10px; }
   .palette.show { display: grid; }
   .sw { display: flex; align-items: center; gap: 6px; padding: 5px 7px; border-radius: 9px;
@@ -103,7 +105,7 @@
 
 <header class="panel" id="hud">
   <h1>魔方 <em>2×2 / 3×3 / 4×4</em></h1>
-  <p class="sub">拖动贴纸转一层 · 点贴纸涂色<br>二阶、三阶给逐步解；四阶求解开发中</p>
+  <p class="sub">拖动贴纸转一层 · 点贴纸涂色<br>没有实体魔方？点「演示」看它自己解完。</p>
   <div class="row" id="sizes">
     <button class="size" data-n="2">二阶</button>
     <button class="size on" data-n="3">三阶</button>
@@ -114,15 +116,21 @@
     <button class="mode" data-mode="paint">涂色</button>
   </div>
   <div class="palette" id="palette"></div>
+  <div class="row" id="diffs">
+    <button class="diff" data-diff="easy">轻松</button>
+    <button class="diff on" data-diff="normal">标准</button>
+    <button class="diff" data-diff="hard">硬核</button>
+  </div>
   <div class="row" id="acts">
     <button id="btn-scramble">打乱</button>
+    <button id="btn-demo">演示</button>
     <button id="btn-reset">复原态</button>
     <button class="primary" id="btn-solve">开始复原</button>
   </div>
   <div class="row" id="acts4" style="margin-top:6px;display:none">
     <button id="btn-pairs">棱块配对清单</button>
   </div>
-  <div class="tip" id="tip">先涂色，或者直接点「打乱」玩。</div>
+  <div class="tip" id="tip">没有实体魔方？点「演示」看它自己解完；也可以点「打乱」自己试。</div>
 </header>
 
 <aside class="panel" id="side">

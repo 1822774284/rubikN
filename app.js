@@ -8,6 +8,16 @@
   var paintColor = 0;
   var FAST = false;
 
+  /* 打乱难度：步数按阶数分开给。4 阶的配对搜索会随打乱深度变慢，硬核封在 30 步。 */
+  var DIFF = 'normal';
+  var DIFF_NAME = { easy: '轻松', normal: '标准', hard: '硬核' };
+  var DIFF_STEPS = {
+    2: { easy: 5, normal: 9, hard: 13 },
+    3: { easy: 10, normal: 18, hard: 26 },
+    4: { easy: 12, normal: 20, hard: 30 }
+  };
+  function scrambleSteps() { return (DIFF_STEPS[N] || DIFF_STEPS[3])[DIFF]; }
+
   /* ---------------- three.js ---------------- */
   var canvas = document.getElementById('stage');
   var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
@@ -342,6 +352,25 @@
     b.addEventListener('click', function () { setMode(b.dataset.mode); });
   });
 
+  /* ---------------- 打乱难度 ---------------- */
+  /* 三个难度按钮直接带上「当前阶数」的步数，一眼看清打了几刀 */
+  function updateDiffLabels() {
+    var steps = DIFF_STEPS[N] || DIFF_STEPS[3];
+    Array.prototype.forEach.call(document.querySelectorAll('#diffs .diff'), function (b) {
+      var k = b.dataset.diff;
+      b.textContent = DIFF_NAME[k] + ' ' + steps[k];
+    });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('#diffs .diff'), function (b) {
+    b.addEventListener('click', function () {
+      DIFF = b.dataset.diff;
+      Array.prototype.forEach.call(document.querySelectorAll('#diffs .diff'), function (x) {
+        x.classList.toggle('on', x.dataset.diff === DIFF);
+      });
+      setTip('打乱难度：' + DIFF_NAME[DIFF] + '，' + N + ' 阶 ' + scrambleSteps() + ' 步。点「打乱」开始。');
+    });
+  });
+
   /* ---------------- 解算 ---------------- */
   var solution = [], cursor = 0, playing = false, pendingSteps = 0;
   var replayStart = null;
@@ -445,6 +474,8 @@
     playing = false;
     updatePlayUI();
     if (animating) { pendingSteps = Math.min(pendingSteps + 1, 8); return; }
+    setTip('第 ' + (cursor + 1) + '/' + solution.length + ' 步：' +
+      C.describeMove(solution[cursor], N) + '（按住那一层的贴纸往那个方向拖）');
     applyOne(false);
   }
 
@@ -513,10 +544,30 @@
   $('btn-scramble').addEventListener('click', function () {
     if (animating) return;
     clearSolution(true);
-    C.scramble(state, N === 4 ? 16 : 12);
+    var steps = scrambleSteps();
+    C.scramble(state, steps);
     sync();
     refreshTip();
-    setTip('已打乱。想复原就点「开始复原」。');
+    setTip('已打乱：' + DIFF_NAME[DIFF] + '，' + steps + ' 步。想复原就点「开始复原」。');
+  });
+
+  /* 演示：给没有实体魔方的人 —— 一键打乱、算解、自动播完 */
+  $('btn-demo').addEventListener('click', function () {
+    if (animating) return;
+    clearSolution(true);
+    var steps = scrambleSteps();
+    C.scramble(state, steps);
+    sync();
+    setTip('正在算 ' + N + ' 阶的解法……');
+    setTimeout(function () {
+      $('btn-solve').click();
+      if (!solution.length) return;
+      cursor = 0;
+      playing = true;
+      updatePlayUI();
+      setTip('演示中：共 ' + solution.length + ' 步，自动播放。想自己转就点「暂停」。');
+      applyOne(true);
+    }, 30);
   });
 
   $('btn-reset').addEventListener('click', function () {
@@ -543,6 +594,7 @@
     clearSolution(true);
     document.getElementById('btn-solve').textContent = '开始复原';
     document.getElementById('acts4').style.display = n === 4 ? 'flex' : 'none';
+    updateDiffLabels();
     Array.prototype.forEach.call(document.querySelectorAll('#sizes .size'), function (b) {
       b.classList.toggle('on', +b.dataset.n === n);
     });
@@ -561,6 +613,7 @@
   sync();
   updateCam();
   resize();
+  updateDiffLabels();
   refreshTip();
   window.addEventListener('resize', resize);
 
